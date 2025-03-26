@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Helpdesk</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .metric-card {
+            border-radius: 10px;
+            padding: 20px;
+            margin: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+        .chart-container {
+            position: relative;
+            margin: auto;
+            height: 300px;
+        }
+        .action-buttons {
+            white-space: nowrap;
+        }
+        .status-badge {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Dashboard de Métricas Helpdesk</h1>
+            <button class="btn btn-primary" onclick="openNewTicketModal()">
+                <i class="bi bi-plus-circle"></i> Novo Chamado
+            </button>
+        </div>
+        
+        <!-- Cards de métricas principais -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="metric-card bg-white">
+                    <h5>Total de Chamados</h5>
+                    <h2 id="total-tickets">-</h2>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="metric-card bg-white">
+                    <h5>Tempo Médio de Resposta</h5>
+                    <h2 id="avg-response">-</h2>
+                    <small>minutos</small>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="metric-card bg-white">
+                    <h5>Tempo Médio de Resolução</h5>
+                    <h2 id="avg-resolution">-</h2>
+                    <small>minutos</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráficos -->
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="bg-white p-3 rounded">
+                    <h4>Tipos de Problemas</h4>
+                    <div class="chart-container">
+                        <canvas id="problemTypesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="bg-white p-3 rounded">
+                    <h4>Status dos Chamados</h4>
+                    <div class="chart-container">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabela de Chamados -->
+        <div class="bg-white p-3 rounded">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4>Lista de Chamados</h4>
+                <div class="d-flex gap-2">
+                    <input type="text" class="form-control" id="searchInput" placeholder="Buscar chamados...">
+                    <select class="form-select" id="statusFilter">
+                        <option value="">Todos os Status</option>
+                        <option value="Open">Abertos</option>
+                        <option value="In Progress">Em Andamento</option>
+                        <option value="Resolved">Resolvidos</option>
+                    </select>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Título</th>
+                            <th>Tipo</th>
+                            <th>Data Abertura</th>
+                            <th>Prioridade</th>
+                            <th>Status</th>
+                            <th>Responsável</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tickets-list">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Novo/Editar Chamado -->
+    <div class="modal fade" id="ticketModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ticketModalTitle">Novo Chamado</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="ticketForm">
+                        <input type="hidden" id="ticketId">
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label class="form-label">Título</label>
+                                <input type="text" class="form-control" id="title" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Tipo</label>
+                                <select class="form-select" id="type" required>
+                                    <option value="Hardware">Hardware</option>
+                                    <option value="Software">Software</option>
+                                    <option value="Network">Rede</option>
+                                    <option value="Printer">Impressora</option>
+                                    <option value="Email">Email</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Descrição</label>
+                            <textarea class="form-control" id="description" rows="3" required></textarea>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Prioridade</label>
+                                <select class="form-select" id="priority" required>
+                                    <option value="Low">Baixa</option>
+                                    <option value="Medium">Média</option>
+                                    <option value="High">Alta</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Status</label>
+                                <select class="form-select" id="status" required>
+                                    <option value="Open">Aberto</option>
+                                    <option value="In Progress">Em Andamento</option>
+                                    <option value="Resolved">Resolvido</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Responsável</label>
+                                <input type="text" class="form-control" id="assigned_to" required>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Tempo de Resposta (min)</label>
+                                <input type="number" class="form-control" id="response_time" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Tempo de Resolução (min)</label>
+                                <input type="number" class="form-control" id="resolution_time" required>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="saveTicket()">Salvar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        let ticketModal;
+        let problemTypesChart;
+        let statusChart;
+        let currentTickets = [];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            ticketModal = new bootstrap.Modal(document.getElementById('ticketModal'));
+            
+            // Inicializar filtros
+            document.getElementById('searchInput').addEventListener('input', filterTickets);
+            document.getElementById('statusFilter').addEventListener('change', filterTickets);
+            
+            // Carregar dados iniciais
+            updateDashboard();
+        });
+
+        function filterTickets() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            
+            const filteredTickets = currentTickets.filter(ticket => {
+                const matchesSearch = ticket.title.toLowerCase().includes(searchTerm) ||
+                                    ticket.type.toLowerCase().includes(searchTerm) ||
+                                    ticket.assigned_to.toLowerCase().includes(searchTerm);
+                const matchesStatus = !statusFilter || ticket.status === statusFilter;
+                return matchesSearch && matchesStatus;
+            });
+            
+            renderTicketsTable(filteredTickets);
+        }
+
+        function updateDashboard() {
+            // Atualizar métricas
+            fetch('/api/metrics')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('total-tickets').textContent = data.total_tickets;
+                    document.getElementById('avg-response').textContent = data.avg_response_time;
+                    document.getElementById('avg-resolution').textContent = data.avg_resolution_time;
+
+                    updateCharts(data);
+                });
+
+            // Atualizar lista de tickets
+            fetch('/api/tickets')
+                .then(response => response.json())
+                .then(tickets => {
+                    currentTickets = tickets;
+                    filterTickets();
+                });
+        }
+
+        function updateCharts(data) {
+            // Atualizar ou criar gráfico de tipos de problemas
+            const problemTypesCtx = document.getElementById('problemTypesChart').getContext('2d');
+            if (problemTypesChart) {
+                problemTypesChart.destroy();
+            }
+            problemTypesChart = new Chart(problemTypesCtx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(data.problem_types),
+                    datasets: [{
+                        data: Object.values(data.problem_types),
+                        backgroundColor: [
+                            '#FF6384',
+                            '#36A2EB',
+                            '#FFCE56',
+                            '#4BC0C0',
+                            '#9966FF'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+
+            // Atualizar ou criar gráfico de status
+            const statusCtx = document.getElementById('statusChart').getContext('2d');
+            if (statusChart) {
+                statusChart.destroy();
+            }
+            statusChart = new Chart(statusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(data.status_count),
+                    datasets: [{
+                        data: Object.values(data.status_count),
+                        backgroundColor: [
+                            '#4BC0C0',
+                            '#FF6384',
+                            '#FFCE56'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        function renderTicketsTable(tickets) {
+            const tbody = document.getElementById('tickets-list');
+            tbody.innerHTML = '';
+            
+            tickets.forEach(ticket => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${ticket.id}</td>
+                    <td>${ticket.title}</td>
+                    <td>${ticket.type}</td>
+                    <td>${ticket.created_date}</td>
+                    <td><span class="badge bg-${ticket.priority === 'High' ? 'danger' : ticket.priority === 'Medium' ? 'warning' : 'success'}">${ticket.priority}</span></td>
+                    <td>
+                        <span class="badge status-badge bg-${ticket.status === 'Open' ? 'primary' : ticket.status === 'In Progress' ? 'warning' : 'success'}"
+                              onclick="cycleStatus(${ticket.id}, '${ticket.status}')">${ticket.status}</span>
+                    </td>
+                    <td>${ticket.assigned_to}</td>
+                    <td class="action-buttons">
+                        <button class="btn btn-sm btn-outline-primary" onclick="editTicket(${ticket.id})">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteTicket(${ticket.id})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function cycleStatus(ticketId, currentStatus) {
+            const statusCycle = {
+                'Open': 'In Progress',
+                'In Progress': 'Resolved',
+                'Resolved': 'Open'
+            };
+            
+            const newStatus = statusCycle[currentStatus];
+            
+            fetch(`/api/tickets/${ticketId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status: newStatus })
+            })
+            .then(() => updateDashboard());
+        }
+
+        function openNewTicketModal() {
+            document.getElementById('ticketModalTitle').textContent = 'Novo Chamado';
+            document.getElementById('ticketForm').reset();
+            document.getElementById('ticketId').value = '';
+            ticketModal.show();
+        }
+
+        function editTicket(id) {
+            const ticket = currentTickets.find(t => t.id === id);
+            if (ticket) {
+                document.getElementById('ticketModalTitle').textContent = 'Editar Chamado';
+                document.getElementById('ticketId').value = ticket.id;
+                document.getElementById('title').value = ticket.title;
+                document.getElementById('type').value = ticket.type;
+                document.getElementById('description').value = ticket.description;
+                document.getElementById('priority').value = ticket.priority;
+                document.getElementById('status').value = ticket.status;
+                document.getElementById('assigned_to').value = ticket.assigned_to;
+                document.getElementById('response_time').value = ticket.response_time;
+                document.getElementById('resolution_time').value = ticket.resolution_time;
+                ticketModal.show();
+            }
+        }
+
+        function deleteTicket(id) {
+            if (confirm('Tem certeza que deseja excluir este chamado?')) {
+                fetch(`/api/tickets/${id}`, {
+                    method: 'DELETE'
+                })
+                .then(() => updateDashboard());
+            }
+        }
+
+        function saveTicket() {
+            const ticketId = document.getElementById('ticketId').value;
+            const ticketData = {
+                title: document.getElementById('title').value,
+                type: document.getElementById('type').value,
+                description: document.getElementById('description').value,
+                priority: document.getElementById('priority').value,
+                status: document.getElementById('status').value,
+                assigned_to: document.getElementById('assigned_to').value,
+                response_time: parseInt(document.getElementById('response_time').value),
+                resolution_time: parseInt(document.getElementById('resolution_time').value)
+            };
+
+            const method = ticketId ? 'PUT' : 'POST';
+            const url = ticketId ? `/api/tickets/${ticketId}` : '/api/tickets';
+
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(ticketData)
+            })
+            .then(() => {
+                ticketModal.hide();
+                updateDashboard();
+            });
+        }
+
+        // Atualizar dashboard a cada 30 segundos
+        setInterval(updateDashboard, 30000);
+    </script>
+</body>
+</html>
