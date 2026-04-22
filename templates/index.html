@@ -15,50 +15,54 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             transition: transform 0.2s;
         }
-        .metric-card:hover {
-            transform: translateY(-5px);
-        }
-        .chart-container {
-            position: relative;
-            margin: auto;
-            height: 300px;
-        }
-        .action-buttons {
-            white-space: nowrap;
-        }
-        .status-badge {
-            cursor: pointer;
+        .metric-card:hover { transform: translateY(-5px); }
+        .chart-container { position: relative; margin: auto; height: 300px; }
+        .action-buttons  { white-space: nowrap; }
+        .status-badge    { cursor: pointer; }
+
+        /* Toast de feedback no canto inferior direito */
+        #toastContainer {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 9999;
         }
     </style>
 </head>
 <body class="bg-light">
+
+    <!-- ── Toast de feedback ─────────────────────────────────────────────── -->
+    <div id="toastContainer"></div>
+
     <div class="container-fluid py-4">
+
+        <!-- Cabeçalho -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1>Dashboard de Métricas Helpdesk</h1>
             <button class="btn btn-primary" onclick="openNewTicketModal()">
                 <i class="bi bi-plus-circle"></i> Novo Chamado
             </button>
         </div>
-        
-        <!-- Cards de métricas principais -->
+
+        <!-- Cards de métricas -->
         <div class="row mb-4">
             <div class="col-md-4">
                 <div class="metric-card bg-white">
                     <h5>Total de Chamados</h5>
-                    <h2 id="total-tickets">-</h2>
+                    <h2 id="total-tickets">—</h2>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="metric-card bg-white">
                     <h5>Tempo Médio de Resposta</h5>
-                    <h2 id="avg-response">-</h2>
+                    <h2 id="avg-response">—</h2>
                     <small>minutos</small>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="metric-card bg-white">
                     <h5>Tempo Médio de Resolução</h5>
-                    <h2 id="avg-resolution">-</h2>
+                    <h2 id="avg-resolution">—</h2>
                     <small>minutos</small>
                 </div>
             </div>
@@ -67,7 +71,7 @@
         <!-- Gráficos -->
         <div class="row">
             <div class="col-md-6 mb-4">
-                <div class="bg-white p-3 rounded">
+                <div class="bg-white p-3 rounded shadow-sm">
                     <h4>Tipos de Problemas</h4>
                     <div class="chart-container">
                         <canvas id="problemTypesChart"></canvas>
@@ -75,7 +79,7 @@
                 </div>
             </div>
             <div class="col-md-6 mb-4">
-                <div class="bg-white p-3 rounded">
+                <div class="bg-white p-3 rounded shadow-sm">
                     <h4>Status dos Chamados</h4>
                     <div class="chart-container">
                         <canvas id="statusChart"></canvas>
@@ -84,8 +88,8 @@
             </div>
         </div>
 
-        <!-- Tabela de Chamados -->
-        <div class="bg-white p-3 rounded">
+        <!-- Tabela de chamados -->
+        <div class="bg-white p-3 rounded shadow-sm">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4>Lista de Chamados</h4>
                 <div class="d-flex gap-2">
@@ -112,14 +116,18 @@
                             <th>Ações</th>
                         </tr>
                     </thead>
-                    <tbody id="tickets-list">
-                    </tbody>
+                    <tbody id="tickets-list"></tbody>
                 </table>
+            </div>
+            <!-- Estado vazio -->
+            <div id="empty-state" class="text-center text-muted py-5 d-none">
+                <i class="bi bi-inbox fs-1"></i>
+                <p class="mt-2">Nenhum chamado encontrado para os filtros selecionados.</p>
             </div>
         </div>
     </div>
 
-    <!-- Modal Novo/Editar Chamado -->
+    <!-- ── Modal Novo/Editar Chamado ─────────────────────────────────────── -->
     <div class="modal fade" id="ticketModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -128,15 +136,16 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <div id="modalError" class="alert alert-danger d-none"></div>
                     <form id="ticketForm">
                         <input type="hidden" id="ticketId">
                         <div class="row mb-3">
                             <div class="col-md-8">
-                                <label class="form-label">Título</label>
-                                <input type="text" class="form-control" id="title" required>
+                                <label class="form-label">Título *</label>
+                                <input type="text" class="form-control" id="title" maxlength="200" required>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Tipo</label>
+                                <label class="form-label">Tipo *</label>
                                 <select class="form-select" id="type" required>
                                     <option value="Hardware">Hardware</option>
                                     <option value="Software">Software</option>
@@ -147,12 +156,12 @@
                             </div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Descrição</label>
-                            <textarea class="form-control" id="description" rows="3" required></textarea>
+                            <label class="form-label">Descrição *</label>
+                            <textarea class="form-control" id="description" rows="3" maxlength="2000" required></textarea>
                         </div>
                         <div class="row mb-3">
                             <div class="col-md-4">
-                                <label class="form-label">Prioridade</label>
+                                <label class="form-label">Prioridade *</label>
                                 <select class="form-select" id="priority" required>
                                     <option value="Low">Baixa</option>
                                     <option value="Medium">Média</option>
@@ -160,7 +169,7 @@
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Status</label>
+                                <label class="form-label">Status *</label>
                                 <select class="form-select" id="status" required>
                                     <option value="Open">Aberto</option>
                                     <option value="In Progress">Em Andamento</option>
@@ -168,251 +177,304 @@
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Responsável</label>
-                                <input type="text" class="form-control" id="assigned_to" required>
+                                <label class="form-label">Responsável *</label>
+                                <input type="text" class="form-control" id="assigned_to" maxlength="100" required>
                             </div>
                         </div>
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">Tempo de Resposta (min)</label>
-                                <input type="number" class="form-control" id="response_time" required>
+                                <input type="number" class="form-control" id="response_time" min="0" value="0">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Tempo de Resolução (min)</label>
-                                <input type="number" class="form-control" id="resolution_time" required>
+                                <input type="number" class="form-control" id="resolution_time" min="0" value="0">
                             </div>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" onclick="saveTicket()">Salvar</button>
+                    <button type="button" class="btn btn-primary" id="saveBtn" onclick="saveTicket()">Salvar</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
     <script>
+        // ── Mapeamentos de tradução e estilos ─────────────────────────────
+
+        const PRIORITY_LABELS = { High: 'Alta', Medium: 'Média', Low: 'Baixa' };
+        const PRIORITY_COLORS = { High: 'danger', Medium: 'warning', Low: 'success' };
+
+        const STATUS_LABELS = { Open: 'Aberto', 'In Progress': 'Em Andamento', Resolved: 'Resolvido' };
+        const STATUS_COLORS = { Open: 'primary', 'In Progress': 'warning', Resolved: 'success' };
+        const STATUS_CYCLE  = { Open: 'In Progress', 'In Progress': 'Resolved', Resolved: 'Open' };
+
+        const TYPE_LABELS = { Hardware: 'Hardware', Software: 'Software', Network: 'Rede', Printer: 'Impressora', Email: 'Email' };
+
+        const CHART_COLORS = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'];
+
+        // ── Estado da aplicação ───────────────────────────────────────────
+
         let ticketModal;
-        let problemTypesChart;
-        let statusChart;
+        let problemTypesChart = null;
+        let statusChart = null;
         let currentTickets = [];
 
-        document.addEventListener('DOMContentLoaded', function() {
+        // ── Inicialização ─────────────────────────────────────────────────
+
+        document.addEventListener('DOMContentLoaded', () => {
             ticketModal = new bootstrap.Modal(document.getElementById('ticketModal'));
-            
-            // Inicializar filtros
             document.getElementById('searchInput').addEventListener('input', filterTickets);
             document.getElementById('statusFilter').addEventListener('change', filterTickets);
-            
-            // Carregar dados iniciais
+            initCharts();
             updateDashboard();
+            setInterval(updateDashboard, 30000);
         });
 
-        function filterTickets() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const statusFilter = document.getElementById('statusFilter').value;
-            
-            const filteredTickets = currentTickets.filter(ticket => {
-                const matchesSearch = ticket.title.toLowerCase().includes(searchTerm) ||
-                                    ticket.type.toLowerCase().includes(searchTerm) ||
-                                    ticket.assigned_to.toLowerCase().includes(searchTerm);
-                const matchesStatus = !statusFilter || ticket.status === statusFilter;
-                return matchesSearch && matchesStatus;
-            });
-            
-            renderTicketsTable(filteredTickets);
+        // ── Gráficos ──────────────────────────────────────────────────────
+
+        function initCharts() {
+            problemTypesChart = new Chart(
+                document.getElementById('problemTypesChart').getContext('2d'),
+                {
+                    type: 'pie',
+                    data: { labels: [], datasets: [{ data: [], backgroundColor: CHART_COLORS }] },
+                    options: { responsive: true, maintainAspectRatio: false },
+                }
+            );
+
+            statusChart = new Chart(
+                document.getElementById('statusChart').getContext('2d'),
+                {
+                    type: 'doughnut',
+                    data: { labels: [], datasets: [{ data: [], backgroundColor: CHART_COLORS }] },
+                    options: { responsive: true, maintainAspectRatio: false },
+                }
+            );
         }
+
+        // Atualiza os dados dos gráficos sem destruí-los (evita flickering)
+        function refreshChart(chart, labels, values) {
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = values;
+            chart.update();
+        }
+
+        // ── Atualização do dashboard ──────────────────────────────────────
 
         function updateDashboard() {
-            // Atualizar métricas
             fetch('/api/metrics')
-                .then(response => response.json())
+                .then(r => { if (!r.ok) throw new Error(r.statusText); return r.json(); })
                 .then(data => {
                     document.getElementById('total-tickets').textContent = data.total_tickets;
-                    document.getElementById('avg-response').textContent = data.avg_response_time;
+                    document.getElementById('avg-response').textContent   = data.avg_response_time;
                     document.getElementById('avg-resolution').textContent = data.avg_resolution_time;
+                    refreshChart(problemTypesChart, Object.keys(data.problem_types), Object.values(data.problem_types));
+                    refreshChart(statusChart,       Object.keys(data.status_count),  Object.values(data.status_count));
+                })
+                .catch(() => showToast('Erro ao carregar métricas.', 'danger'));
 
-                    updateCharts(data);
-                });
-
-            // Atualizar lista de tickets
             fetch('/api/tickets')
-                .then(response => response.json())
-                .then(tickets => {
-                    currentTickets = tickets;
-                    filterTickets();
-                });
+                .then(r => { if (!r.ok) throw new Error(r.statusText); return r.json(); })
+                .then(tickets => { currentTickets = tickets; filterTickets(); })
+                .catch(() => showToast('Erro ao carregar chamados.', 'danger'));
         }
 
-        function updateCharts(data) {
-            // Atualizar ou criar gráfico de tipos de problemas
-            const problemTypesCtx = document.getElementById('problemTypesChart').getContext('2d');
-            if (problemTypesChart) {
-                problemTypesChart.destroy();
-            }
-            problemTypesChart = new Chart(problemTypesCtx, {
-                type: 'pie',
-                data: {
-                    labels: Object.keys(data.problem_types),
-                    datasets: [{
-                        data: Object.values(data.problem_types),
-                        backgroundColor: [
-                            '#FF6384',
-                            '#36A2EB',
-                            '#FFCE56',
-                            '#4BC0C0',
-                            '#9966FF'
-                        ]
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false
-                }
+        // ── Filtro e renderização da tabela ───────────────────────────────
+
+        function filterTickets() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const byStatus = document.getElementById('statusFilter').value;
+
+            const filtered = currentTickets.filter(t => {
+                const matchText = t.title.toLowerCase().includes(search)
+                               || t.type.toLowerCase().includes(search)
+                               || t.assigned_to.toLowerCase().includes(search);
+                const matchStatus = !byStatus || t.status === byStatus;
+                return matchText && matchStatus;
             });
 
-            // Atualizar ou criar gráfico de status
-            const statusCtx = document.getElementById('statusChart').getContext('2d');
-            if (statusChart) {
-                statusChart.destroy();
-            }
-            statusChart = new Chart(statusCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(data.status_count),
-                    datasets: [{
-                        data: Object.values(data.status_count),
-                        backgroundColor: [
-                            '#4BC0C0',
-                            '#FF6384',
-                            '#FFCE56'
-                        ]
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false
-                }
-            });
+            renderTicketsTable(filtered);
         }
 
         function renderTicketsTable(tickets) {
             const tbody = document.getElementById('tickets-list');
+            const emptyState = document.getElementById('empty-state');
             tbody.innerHTML = '';
-            
+
+            if (tickets.length === 0) {
+                emptyState.classList.remove('d-none');
+                return;
+            }
+            emptyState.classList.add('d-none');
+
             tickets.forEach(ticket => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${ticket.id}</td>
-                    <td>${ticket.title}</td>
-                    <td>${ticket.type}</td>
-                    <td>${ticket.created_date}</td>
-                    <td><span class="badge bg-${ticket.priority === 'High' ? 'danger' : ticket.priority === 'Medium' ? 'warning' : 'success'}">${ticket.priority}</span></td>
-                    <td>
-                        <span class="badge status-badge bg-${ticket.status === 'Open' ? 'primary' : ticket.status === 'In Progress' ? 'warning' : 'success'}"
-                              onclick="cycleStatus(${ticket.id}, '${ticket.status}')">${ticket.status}</span>
-                    </td>
-                    <td>${ticket.assigned_to}</td>
-                    <td class="action-buttons">
-                        <button class="btn btn-sm btn-outline-primary" onclick="editTicket(${ticket.id})">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteTicket(${ticket.id})">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </td>
+
+                // Campos que podem conter HTML do usuário → textContent (previne XSS)
+                const cells = [
+                    ticket.id,
+                    ticket.title,
+                    TYPE_LABELS[ticket.type] || ticket.type,
+                    ticket.created_date,
+                ];
+                cells.forEach(value => {
+                    const td = document.createElement('td');
+                    td.textContent = value;
+                    tr.appendChild(td);
+                });
+
+                // Prioridade — badge colorido
+                const tdPriority = document.createElement('td');
+                const bPriority = document.createElement('span');
+                bPriority.className = `badge bg-${PRIORITY_COLORS[ticket.priority] || 'secondary'}`;
+                bPriority.textContent = PRIORITY_LABELS[ticket.priority] || ticket.priority;
+                tdPriority.appendChild(bPriority);
+                tr.appendChild(tdPriority);
+
+                // Status — badge clicável para ciclar status
+                const tdStatus = document.createElement('td');
+                const bStatus = document.createElement('span');
+                bStatus.className = `badge status-badge bg-${STATUS_COLORS[ticket.status] || 'secondary'}`;
+                bStatus.textContent = STATUS_LABELS[ticket.status] || ticket.status;
+                bStatus.addEventListener('click', () => cycleStatus(ticket.id, ticket.status));
+                tdStatus.appendChild(bStatus);
+                tr.appendChild(tdStatus);
+
+                // Responsável — textContent (dado do usuário)
+                const tdAssigned = document.createElement('td');
+                tdAssigned.textContent = ticket.assigned_to;
+                tr.appendChild(tdAssigned);
+
+                // Botões de ação
+                const tdActions = document.createElement('td');
+                tdActions.className = 'action-buttons';
+                tdActions.innerHTML = `
+                    <button class="btn btn-sm btn-outline-primary me-1" title="Editar">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" title="Excluir">
+                        <i class="bi bi-trash"></i>
+                    </button>
                 `;
+                tdActions.querySelector('.btn-outline-primary').addEventListener('click', () => editTicket(ticket.id));
+                tdActions.querySelector('.btn-outline-danger').addEventListener('click',  () => deleteTicket(ticket.id));
+                tr.appendChild(tdActions);
+
                 tbody.appendChild(tr);
             });
         }
 
+        // ── Ações CRUD ────────────────────────────────────────────────────
+
         function cycleStatus(ticketId, currentStatus) {
-            const statusCycle = {
-                'Open': 'In Progress',
-                'In Progress': 'Resolved',
-                'Resolved': 'Open'
-            };
-            
-            const newStatus = statusCycle[currentStatus];
-            
             fetch(`/api/tickets/${ticketId}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ status: newStatus })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: STATUS_CYCLE[currentStatus] }),
             })
-            .then(() => updateDashboard());
+            .then(r => { if (!r.ok) throw new Error(); updateDashboard(); })
+            .catch(() => showToast('Erro ao atualizar status.', 'danger'));
         }
 
         function openNewTicketModal() {
             document.getElementById('ticketModalTitle').textContent = 'Novo Chamado';
             document.getElementById('ticketForm').reset();
             document.getElementById('ticketId').value = '';
+            document.getElementById('modalError').classList.add('d-none');
             ticketModal.show();
         }
 
         function editTicket(id) {
             const ticket = currentTickets.find(t => t.id === id);
-            if (ticket) {
-                document.getElementById('ticketModalTitle').textContent = 'Editar Chamado';
-                document.getElementById('ticketId').value = ticket.id;
-                document.getElementById('title').value = ticket.title;
-                document.getElementById('type').value = ticket.type;
-                document.getElementById('description').value = ticket.description;
-                document.getElementById('priority').value = ticket.priority;
-                document.getElementById('status').value = ticket.status;
-                document.getElementById('assigned_to').value = ticket.assigned_to;
-                document.getElementById('response_time').value = ticket.response_time;
-                document.getElementById('resolution_time').value = ticket.resolution_time;
-                ticketModal.show();
-            }
+            if (!ticket) return;
+            document.getElementById('ticketModalTitle').textContent = 'Editar Chamado';
+            document.getElementById('ticketId').value        = ticket.id;
+            document.getElementById('title').value           = ticket.title;
+            document.getElementById('type').value            = ticket.type;
+            document.getElementById('description').value     = ticket.description;
+            document.getElementById('priority').value        = ticket.priority;
+            document.getElementById('status').value          = ticket.status;
+            document.getElementById('assigned_to').value     = ticket.assigned_to;
+            document.getElementById('response_time').value   = ticket.response_time;
+            document.getElementById('resolution_time').value = ticket.resolution_time;
+            document.getElementById('modalError').classList.add('d-none');
+            ticketModal.show();
         }
 
         function deleteTicket(id) {
-            if (confirm('Tem certeza que deseja excluir este chamado?')) {
-                fetch(`/api/tickets/${id}`, {
-                    method: 'DELETE'
+            if (!confirm('Tem certeza que deseja excluir este chamado?')) return;
+            fetch(`/api/tickets/${id}`, { method: 'DELETE' })
+                .then(r => {
+                    if (!r.ok) throw new Error();
+                    showToast('Chamado excluído com sucesso.', 'success');
+                    updateDashboard();
                 })
-                .then(() => updateDashboard());
-            }
+                .catch(() => showToast('Erro ao excluir chamado.', 'danger'));
         }
 
         function saveTicket() {
+            const form = document.getElementById('ticketForm');
+            if (!form.checkValidity()) { form.reportValidity(); return; }
+
             const ticketId = document.getElementById('ticketId').value;
-            const ticketData = {
-                title: document.getElementById('title').value,
-                type: document.getElementById('type').value,
-                description: document.getElementById('description').value,
-                priority: document.getElementById('priority').value,
-                status: document.getElementById('status').value,
-                assigned_to: document.getElementById('assigned_to').value,
-                response_time: parseInt(document.getElementById('response_time').value),
-                resolution_time: parseInt(document.getElementById('resolution_time').value)
+            const payload = {
+                title:           document.getElementById('title').value,
+                type:            document.getElementById('type').value,
+                description:     document.getElementById('description').value,
+                priority:        document.getElementById('priority').value,
+                status:          document.getElementById('status').value,
+                assigned_to:     document.getElementById('assigned_to').value,
+                response_time:   parseInt(document.getElementById('response_time').value) || 0,
+                resolution_time: parseInt(document.getElementById('resolution_time').value) || 0,
             };
 
             const method = ticketId ? 'PUT' : 'POST';
-            const url = ticketId ? `/api/tickets/${ticketId}` : '/api/tickets';
+            const url    = ticketId ? `/api/tickets/${ticketId}` : '/api/tickets';
+
+            document.getElementById('saveBtn').disabled = true;
 
             fetch(url, {
-                method: method,
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(ticketData)
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
             })
-            .then(() => {
+            .then(async r => {
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.error || 'Erro desconhecido.');
                 ticketModal.hide();
+                showToast(ticketId ? 'Chamado atualizado.' : 'Chamado criado.', 'success');
                 updateDashboard();
+            })
+            .catch(err => {
+                const errEl = document.getElementById('modalError');
+                errEl.textContent = err.message;
+                errEl.classList.remove('d-none');
+            })
+            .finally(() => {
+                document.getElementById('saveBtn').disabled = false;
             });
         }
 
-        // Atualizar dashboard a cada 30 segundos
-        setInterval(updateDashboard, 30000);
+        // ── Toast de feedback ─────────────────────────────────────────────
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-bg-${type} border-0 show mb-2`;
+            toast.setAttribute('role', 'alert');
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
     </script>
 </body>
 </html>
