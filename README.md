@@ -9,6 +9,7 @@ Dashboard web interativo para gerenciamento de chamados de helpdesk, com métric
 
 O sistema permite registrar, acompanhar e resolver chamados técnicos com controle de prioridade, responsável e tempo de resposta — tudo salvo localmente em JSON, sem necessidade de banco de dados externo.
 
+
 ---
 
 ## Funcionalidades
